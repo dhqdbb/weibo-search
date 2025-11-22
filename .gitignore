@@ -311,3 +311,10 @@ cython_debug/
 
 #
 
+# Workflow temporary files
+temp_workflow/
+结果文件/
+example_chairman_data.xlsx
+*.xlsx
+*.csv
+!requirements.txt
