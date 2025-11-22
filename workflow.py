@@ -138,6 +138,8 @@ class WeiboWorkflow:
             )
             
             # 读取爬取结果
+            # 注意：这里假设Scrapy的CsvPipeline输出结构为：results_dir/keyword/keyword.csv
+            # 这是weibo/pipelines.py中CsvPipeline的默认行为
             csv_file = Path(self.results_dir) / keyword / f'{keyword}.csv'
             if csv_file.exists():
                 weibo_df = pd.read_csv(csv_file, encoding='utf-8-sig')
@@ -368,6 +370,13 @@ def main():
         help='请求之间的延迟时间（秒，默认2）'
     )
     
+    parser.add_argument(
+        '--results-dir', '-r',
+        type=str,
+        default='结果文件',
+        help='爬虫结果保存目录（默认"结果文件"）'
+    )
+    
     args = parser.parse_args()
     
     # 检查输入文件是否存在
@@ -382,7 +391,8 @@ def main():
         max_posts=args.max_posts,
         target_years=args.years,
         crawl_timeout=args.timeout,
-        delay_between_requests=args.delay
+        delay_between_requests=args.delay,
+        results_dir=args.results_dir
     )
     
     workflow.run()

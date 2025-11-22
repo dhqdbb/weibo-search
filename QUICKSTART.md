@@ -137,7 +137,7 @@ A: 正常现象，可能确实没有相关微博，或微博已被删除。
 A: 使用 `--years` 参数，如：`--years 2020 2022`
 
 **Q: 可以修改关键词格式吗？**  
-A: 可以，编辑 `workflow.py` 的第73行，修改 `keyword` 的生成逻辑。
+A: 可以，编辑 `workflow.py` 中的 `expand_to_company_years()` 方法，修改关键词生成逻辑（搜索 `'keyword':` 字段赋值处）。
 
 ## 完整文档
 
