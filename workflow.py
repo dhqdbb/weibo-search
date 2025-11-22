@@ -29,7 +29,8 @@ from pathlib import Path
 class WeiboWorkflow:
     """微博爬虫工作流程管理类"""
     
-    def __init__(self, input_file, output_file, max_posts=5, target_years=None):
+    def __init__(self, input_file, output_file, max_posts=5, target_years=None, 
+                 crawl_timeout=300, delay_between_requests=2, results_dir='结果文件'):
         """
         初始化工作流
         
@@ -38,11 +39,17 @@ class WeiboWorkflow:
             output_file: 输出的Excel/CSV文件路径
             max_posts: 每个公司-年度组合最多保留的微博数量（默认5条）
             target_years: 目标年份列表（默认2019-2023）
+            crawl_timeout: 单次爬取的超时时间（秒，默认300）
+            delay_between_requests: 请求之间的延迟时间（秒，默认2）
+            results_dir: 爬虫结果保存目录（默认'结果文件'）
         """
         self.input_file = input_file
         self.output_file = output_file
         self.max_posts = max_posts
         self.target_years = target_years or list(range(2019, 2024))
+        self.crawl_timeout = crawl_timeout
+        self.delay_between_requests = delay_between_requests
+        self.results_dir = results_dir
         self.temp_dir = Path("temp_workflow")
         self.results = []
         
@@ -127,11 +134,11 @@ class WeiboWorkflow:
                 cwd=os.path.dirname(os.path.abspath(__file__)),
                 capture_output=True,
                 text=True,
-                timeout=300  # 5分钟超时
+                timeout=self.crawl_timeout  # 使用配置的超时时间
             )
             
             # 读取爬取结果
-            csv_file = Path('结果文件') / keyword / f'{keyword}.csv'
+            csv_file = Path(self.results_dir) / keyword / f'{keyword}.csv'
             if csv_file.exists():
                 weibo_df = pd.read_csv(csv_file, encoding='utf-8-sig')
                 weibo_list = weibo_df.to_dict('records')
@@ -176,7 +183,7 @@ class WeiboWorkflow:
             
             # 添加延迟，避免请求过快
             if i < len(expanded_records) - 1:
-                time.sleep(2)
+                time.sleep(self.delay_between_requests)
     
     def format_output(self):
         """
@@ -214,6 +221,12 @@ class WeiboWorkflow:
                 row['查询年份'] = year
                 row['关键词'] = record['keyword']
                 row['微博数量'] = len(weibo_posts)
+                
+                # CSV文件中的列名映射
+                # CSV headers: 'id', 'bid', 'user_id', '用户昵称', '微博正文', '头条文章url',
+                #              '发布位置', '艾特用户', '话题', '转发数', '评论数', '点赞数', '发布时间',
+                #              '发布工具', '微博图片url', '微博视频url', 'retweet_id', 'ip', 'user_authentication',
+                #              '会员类型', '会员等级'
                 
                 for j, weibo in enumerate(weibo_posts[:self.max_posts], 1):
                     row[f'微博{j}_内容'] = weibo.get('微博正文', '')
@@ -341,6 +354,20 @@ def main():
         help='目标年份列表（默认2019-2023），如: --years 2020 2021 2022'
     )
     
+    parser.add_argument(
+        '--timeout', '-t',
+        type=int,
+        default=300,
+        help='单次爬取的超时时间（秒，默认300）'
+    )
+    
+    parser.add_argument(
+        '--delay', '-d',
+        type=float,
+        default=2,
+        help='请求之间的延迟时间（秒，默认2）'
+    )
+    
     args = parser.parse_args()
     
     # 检查输入文件是否存在
@@ -353,7 +380,9 @@ def main():
         input_file=args.input,
         output_file=args.output,
         max_posts=args.max_posts,
-        target_years=args.years
+        target_years=args.years,
+        crawl_timeout=args.timeout,
+        delay_between_requests=args.delay
     )
     
     workflow.run()
