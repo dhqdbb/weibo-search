@@ -95,56 +95,6 @@ class WeiboWorkflow:
         print(f"展开得到 {len(expanded_records)} 个公司-年度组合")
         return expanded_records
     
-    def create_temp_settings(self, keyword, year):
-        """
-        创建临时的settings配置文件用于单次爬取
-        
-        Args:
-            keyword: 搜索关键词
-            year: 目标年份
-        """
-        settings_template = f"""# -*- coding: utf-8 -*-
-# 临时配置文件 - 自动生成
-BOT_NAME = 'weibo'
-SPIDER_MODULES = ['weibo.spiders']
-NEWSPIDER_MODULE = 'weibo.spiders'
-COOKIES_ENABLED = False
-TELNETCONSOLE_ENABLED = False
-LOG_LEVEL = 'ERROR'
-DOWNLOAD_DELAY = 10
-
-# 从原始settings.py复制cookie配置
-import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from weibo.settings import DEFAULT_REQUEST_HEADERS
-DEFAULT_REQUEST_HEADERS = DEFAULT_REQUEST_HEADERS
-
-ITEM_PIPELINES = {{
-    'weibo.pipelines.DuplicatesPipeline': 300,
-    'weibo.pipelines.CsvPipeline': 301,
-}}
-
-KEYWORD_LIST = ['{keyword}']
-WEIBO_TYPE = 0  # 搜索全部微博
-CONTAIN_TYPE = 0  # 不筛选内容类型
-REGION = ['全部']
-START_DATE = '{year}-01-01'
-END_DATE = '{year}-12-31'
-FURTHER_THRESHOLD = 46
-LIMIT_RESULT = {self.max_posts}  # 限制结果数量
-IMAGES_STORE = './'
-FILES_STORE = './'
-"""
-        
-        # 创建临时目录
-        self.temp_dir.mkdir(exist_ok=True)
-        temp_settings_file = self.temp_dir / "temp_settings.py"
-        
-        with open(temp_settings_file, 'w', encoding='utf-8') as f:
-            f.write(settings_template)
-        
-        return temp_settings_file
-    
     def crawl_weibo(self, keyword, year):
         """
         调用Scrapy爬虫获取指定关键词和年份的微博数据
@@ -158,11 +108,8 @@ FILES_STORE = './'
         """
         print(f"正在爬取: {keyword} ({year}年)")
         
-        # 创建临时配置
-        temp_settings = self.create_temp_settings(keyword, year)
-        
         try:
-            # 构造scrapy命令
+            # 构造scrapy命令，使用命令行参数覆盖settings
             cmd = [
                 'scrapy', 'crawl', 'search',
                 '-s', f'KEYWORD_LIST=["{keyword}"]',
@@ -204,10 +151,6 @@ FILES_STORE = './'
         except Exception as e:
             print(f"爬取失败: {keyword} ({year}), 错误: {e}")
             return []
-        finally:
-            # 清理临时文件
-            if temp_settings.exists():
-                temp_settings.unlink()
     
     def process_records(self, expanded_records):
         """
